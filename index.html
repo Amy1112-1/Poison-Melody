@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Poison Melody</title>
+<style>
+  :root{
+    --green:#075844;
+    --mint:#61cbb7;
+    --cream:#fff8df;
+    --yellow:#ffbd12;
+    --pink:#f66ec5;
+    --ink:#143c36;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#073f36;font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink)}
+  button{font:inherit}
+  #app{width:100%;height:100%;display:grid;place-items:center;overflow:hidden}
+  .stage{position:relative;width:min(100vw,calc(100vh * 16 / 9));aspect-ratio:16/9;overflow:hidden;background-size:100% 100%;background-repeat:no-repeat;background-position:center}
+  .page{position:absolute;inset:0;display:none}
+  .page.active{display:block}
+  .cover-page{background:url('images/cover.png') center/100% 100% no-repeat}
+  .game-page{background:url('images/background.png') center/100% 100% no-repeat}
+  .result-page{background:url('images/background1.png') center/100% 100% no-repeat}
+  .safe-box{position:absolute;left:18%;right:18%;top:13%;bottom:13%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:1.25vh;min-height:0;padding:clamp(14px,2.4vw,34px);isolation:isolate}
+  .safe-box>*{position:relative;z-index:1}
+  .title-blur{display:inline-flex;align-items:center;justify-content:center;padding:.18em .55em;background:transparent;border:0;box-shadow:none;}
+  h1{margin:0;font-family:'Arial Rounded MT Bold','Trebuchet MS','Microsoft YaHei',sans-serif;font-size:clamp(42px,5.2vw,88px);line-height:.96;color:var(--green);letter-spacing:.055em;font-weight:1000;text-shadow:0 3px 0 rgba(255,255,255,.9),0 8px 18px rgba(7,88,68,.18),2px 2px 0 rgba(255,189,18,.32);transform:rotate(-1deg)}
+  .level{font-size:clamp(18px,2vw,34px);font-weight:900;color:#a24a82;background:#fff3bd;padding:.35em 1.1em;border-radius:999px}
+  .intro{margin:.2em 0;font-size:clamp(14px,1.4vw,25px);line-height:1.5;font-weight:700;max-width:760px}
+  .note-row{display:flex;align-items:center;justify-content:center;gap:clamp(8px,1.3vw,22px);width:100%;flex-wrap:nowrap}
+  .note-chip{width:clamp(74px,8vw,132px);height:clamp(72px,7.8vw,128px);border-radius:18px;background:rgba(255,255,255,.88);border:3px solid rgba(7,88,68,.25);display:flex;align-items:center;justify-content:center;padding:8px}
+  .note-chip img{max-width:82%;max-height:82%;object-fit:contain}
+  .note-chip span{font-size:clamp(10px,.9vw,15px);font-weight:800;margin-top:3px;white-space:nowrap}
+  .primary{border:0;border-radius:999px;padding:.7em 2.2em;background:var(--green);color:white;font-weight:900;font-size:clamp(17px,1.5vw,26px);cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.15)}
+  .primary:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.15)}
+  .primary:disabled{opacity:.45;cursor:not-allowed;transform:none}
+  .secondary{border:2px solid var(--green);border-radius:999px;padding:.55em 1.25em;background:rgba(255,255,255,.9);color:var(--green);font-weight:900;cursor:pointer}
+
+  /* Menu */
+  .menu-box{top:10%;bottom:10%;gap:1vh}
+  .menu-title{font-family:'Trebuchet MS','Arial Rounded MT Bold','Microsoft YaHei',sans-serif;font-size:clamp(34px,4.2vw,64px);font-weight:1000;letter-spacing:.08em;color:var(--green);text-shadow:0 3px 0 rgba(255,255,255,.72),0 7px 18px rgba(7,88,68,.18);line-height:1.05}
+  .level-switch{display:flex;gap:clamp(12px,1.7vw,24px);justify-content:center;align-items:center;margin:.35vh 0 .65vh}
+  .level-btn{position:relative;min-width:clamp(118px,12vw,178px);min-height:clamp(48px,5vw,68px);border:0;border-radius:18px;padding:.55em 1.2em;background:rgba(255,255,255,.93);color:var(--green);font-family:'Arial Rounded MT Bold','Trebuchet MS','Microsoft YaHei',sans-serif;font-size:clamp(16px,1.45vw,24px);letter-spacing:.06em;font-weight:1000;cursor:pointer;box-shadow:0 5px 0 rgba(7,88,68,.20),0 10px 18px rgba(7,88,68,.10);transition:transform .15s ease,box-shadow .15s ease,background .15s ease}
+  .level-btn::before{content:'✦';display:inline-block;margin-right:.45em;color:var(--yellow);font-size:.9em;vertical-align:.03em}
+  .level-btn:hover{transform:translateY(-2px);box-shadow:0 7px 0 rgba(7,88,68,.18),0 13px 22px rgba(7,88,68,.12)}
+  .level-btn.active{background:var(--green);color:white;box-shadow:0 5px 0 #033f31,0 11px 22px rgba(7,88,68,.20);transform:translateY(-1px)}
+  .level-btn.active::before{color:#fff3bd}
+  .menu-help{font-size:clamp(12px,1.1vw,18px);font-weight:700;margin-bottom:.4vh}
+  .palette{display:flex;gap:clamp(8px,1.1vw,18px);justify-content:center;align-items:center}
+  .palette button{width:clamp(80px,8.4vw,138px);height:clamp(74px,7.4vw,120px);background:#fff;border:3px solid transparent;border-radius:16px;cursor:pointer;padding:7px;display:flex;align-items:center;justify-content:center}
+  .palette button:hover,.palette button:focus-visible{border-color:var(--mint);outline:none}
+  .palette img{width:76%;height:76%;object-fit:contain;pointer-events:none}
+  .timeline-wrap{width:min(760px,88%);margin-top:.7vh}
+  .beat-labels{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:5px;color:var(--green);font-size:clamp(10px,.9vw,15px);font-weight:900}
+  .timeline{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;height:clamp(86px,9vw,145px)}
+  .beat-cell{border:3px dashed rgba(7,88,68,.38);background:rgba(255,255,255,.72);border-radius:15px;cursor:pointer;display:grid;place-items:center;position:relative;min-width:0}
+  .beat-cell.selected{border-style:solid;border-color:var(--pink);box-shadow:0 0 0 4px rgba(246,110,197,.18) inset}
+  .beat-cell .hint{font-weight:900;color:rgba(7,88,68,.45);font-size:clamp(18px,2vw,30px)}
+  .event-tile{position:absolute;top:5px;bottom:5px;border-radius:13px;background:rgba(255,255,255,.98);border:3px solid var(--green);display:flex;align-items:center;justify-content:center;z-index:2;cursor:pointer;overflow:hidden}
+  .event-tile img{width:76%;height:76%;object-fit:contain}
+  .event-tile.rest img{max-width:none}
+  .menu-actions{display:flex;gap:12px;margin-top:1vh;justify-content:center;align-items:center}
+  .status{min-height:1.35em;font-size:clamp(12px,1vw,17px);font-weight:800;color:#9b3c71}
+
+  /* Game */
+  .game-content{position:absolute;left:11%;right:11%;top:12%;bottom:11%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;text-align:center}
+  .counter{position:absolute;top:4%;right:5%;background:rgba(255,255,255,.88);border-radius:999px;padding:.45em 1em;font-weight:950;color:var(--green);font-size:clamp(14px,1.2vw,21px)}
+  .game-cue{font-size:clamp(28px,3vw,50px);font-weight:950;color:var(--green);min-height:1.2em;line-height:1.2;text-shadow:0 2px 0 rgba(255,255,255,.55)}
+  .rhythm-card{width:min(1040px,92%);height:clamp(150px,17vw,285px);display:grid;grid-template-columns:repeat(4,1fr);gap:12px;position:relative;padding:10px;border-radius:24px;background:rgba(255,248,223,.9);border:4px solid rgba(7,88,68,.55)}
+  .game-beat{border-right:2px dashed rgba(7,88,68,.25);display:grid;place-items:center;position:relative}
+  .game-beat:last-child{border-right:0}
+  .game-event{position:absolute;top:14px;bottom:14px;border-radius:18px;background:white;border:4px solid var(--green);display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .game-event img{width:76%;height:76%;object-fit:contain}
+  .game-event.rest img{max-width:none}
+  .game-actions{display:flex;gap:18px;align-items:center;justify-content:center}
+  .replay,.next{min-width:clamp(150px,17vw,255px);border:0;border-radius:999px;padding:.72em 1.2em;font-size:clamp(16px,1.45vw,25px);font-weight:950;cursor:pointer}
+  .replay{background:white;color:var(--green);border:3px solid var(--green)}
+  .next{background:var(--green);color:white}
+  .next:disabled,.replay:disabled{opacity:.45;cursor:not-allowed}
+  .poison-overlay{position:absolute;inset:0;background:rgba(3,48,40,.50);display:none;align-items:center;justify-content:center;z-index:20;overflow:hidden}
+  .poison-overlay::before{content:'';position:absolute;inset:-18%;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.0) 0 10deg,rgba(255,189,18,.28) 10deg 20deg,rgba(246,110,197,.24) 20deg 30deg);transform:scale(.2) rotate(0deg);opacity:0;pointer-events:none}
+  .poison-overlay.show{display:flex;animation:poisonFlash .32s ease-out}
+  .poison-overlay.show::before{animation:burstSpin .85s cubic-bezier(.2,.8,.2,1) forwards}
+  .poison-card{width:min(64%,940px);max-height:82%;position:relative;animation:poisonPop .5s cubic-bezier(.12,1.55,.28,1),oopsWobble .9s .45s ease-in-out;display:flex;flex-direction:column;align-items:center;gap:10px}
+  .poison-card img{display:block;width:100%;height:auto;max-height:70vh;object-fit:contain;filter:drop-shadow(0 12px 20px rgba(0,0,0,.25))}
+  .close-poison{position:absolute;right:2%;top:2%;width:54px;height:54px;border-radius:50%;border:0;background:white;color:var(--green);font-size:30px;font-weight:950;cursor:pointer;z-index:6;pointer-events:auto;touch-action:manipulation;display:grid;place-items:center;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+  .poison-card img{pointer-events:none}
+  .start-actions{display:flex;gap:16px;justify-content:center;align-items:center;flex-wrap:wrap}.start-actions .primary,.start-actions .secondary{width:clamp(150px,15vw,230px);height:clamp(48px,4.5vw,66px);padding:0 1.2em;display:inline-flex;align-items:center;justify-content:center;font-size:clamp(16px,1.35vw,23px);box-sizing:border-box}
+  .info-overlay{position:absolute;inset:0;background:rgba(3,48,40,.42);display:none;align-items:center;justify-content:center;z-index:30}
+  .info-overlay.show{display:flex}
+  .info-card{width:min(70%,780px);background:rgba(255,248,223,.96);border:3px solid rgba(7,88,68,.35);border-radius:26px;padding:clamp(18px,2.4vw,34px);text-align:center;box-shadow:0 18px 40px rgba(0,0,0,.2);position:relative}
+  .info-card h2{margin:0 0 .7em;color:var(--green);font-size:clamp(24px,2.8vw,44px);text-align:center}
+  .info-card p{margin:.48em auto;font-size:clamp(14px,1.25vw,21px);font-weight:700;line-height:1.65;text-align:center;max-width:640px}
+  .info-close{position:absolute;right:14px;top:12px;width:44px;height:44px;border:0;border-radius:50%;background:white;color:var(--green);font-size:24px;font-weight:950;cursor:pointer}
+  .result-content{position:absolute;left:18%;right:18%;top:7%;bottom:54%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2.2vh;z-index:3}
+  .result-message{max-width:900px;padding:.4em .8em;background:transparent;border:0;box-shadow:none;font-family:'Arial Rounded MT Bold','Trebuchet MS','Microsoft YaHei',sans-serif;color:var(--green);text-shadow:0 3px 0 rgba(255,255,255,.85),0 8px 18px rgba(7,88,68,.14);animation:victoryPop .7s cubic-bezier(.2,1.25,.35,1)}
+  .result-message .result-title{display:block;font-size:clamp(38px,4.5vw,72px);font-weight:1000;letter-spacing:.05em;line-height:1;margin-bottom:.22em}
+  .result-message .result-sub{display:block;font-size:clamp(20px,2.25vw,38px);font-weight:900;line-height:1.25;letter-spacing:.02em}
+  .result-actions{display:flex;gap:14px;justify-content:center;align-items:center}
+  .victory-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2}
+  .victory-fx span{position:absolute;font-size:clamp(26px,3vw,54px);color:#ffbd12;opacity:0;animation:confettiBurst 2.4s ease-out infinite}
+  .victory-fx span:nth-child(1){left:17%;top:18%;animation-delay:.05s}.victory-fx span:nth-child(2){left:30%;top:9%;color:#f66ec5;animation-delay:.28s}.victory-fx span:nth-child(3){right:22%;top:13%;color:#61cbb7;animation-delay:.5s}.victory-fx span:nth-child(4){right:13%;top:27%;animation-delay:.72s}.victory-fx span:nth-child(5){left:10%;top:35%;color:#f66ec5;animation-delay:.94s}.victory-fx span:nth-child(6){right:32%;top:34%;color:#ffbd12;animation-delay:1.16s}
+  @keyframes victoryPop{0%{transform:scale(.76);opacity:0}70%{transform:scale(1.05);opacity:1}100%{transform:scale(1);opacity:1}}
+  @keyframes confettiBurst{0%{transform:translateY(12px) scale(.55) rotate(0);opacity:0}18%{opacity:1}65%{opacity:1}100%{transform:translateY(-44px) scale(1.12) rotate(28deg);opacity:0}}
+  .stage.shake{animation:stageShake .78s ease-in-out 1}
+  @keyframes stageShake{0%,100%{transform:translate(0,0) rotate(0)}10%{transform:translate(-14px,4px) rotate(-.6deg)}22%{transform:translate(13px,-3px) rotate(.5deg)}34%{transform:translate(-10px,2px) rotate(-.4deg)}48%{transform:translate(9px,-2px) rotate(.35deg)}64%{transform:translate(-6px,1px)}82%{transform:translate(4px,-1px)}}
+  @keyframes poisonFlash{0%{background:rgba(255,255,255,.9)}30%{background:rgba(246,110,197,.58)}100%{background:rgba(3,48,40,.50)}}
+  @keyframes burstSpin{0%{transform:scale(.18) rotate(-35deg);opacity:0}28%{opacity:1}100%{transform:scale(1.35) rotate(25deg);opacity:0}}
+  @keyframes poisonPop{0%{transform:scale(.15) rotate(-13deg);opacity:0}58%{transform:scale(1.18) rotate(4deg);opacity:1}78%{transform:scale(.96) rotate(-2deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+  .finished{font-size:clamp(26px,3vw,50px);font-weight:950;color:var(--green)}
+  @keyframes pop{0%{transform:scale(.48) rotate(-5deg);opacity:0}72%{transform:scale(1.08) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+  @keyframes oopsWobble{0%,100%{transform:rotate(0)}20%{transform:rotate(-2.5deg)}40%{transform:rotate(2.5deg)}60%{transform:rotate(-1.5deg)}80%{transform:rotate(1.5deg)}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+
+  .home-btn{position:absolute;left:2.2%;top:3.2%;width:clamp(44px,4.2vw,62px);height:clamp(44px,4.2vw,62px);border:0;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 5px 14px rgba(0,0,0,.16);display:grid;place-items:center;cursor:pointer;z-index:12;color:var(--green)}
+  .home-btn svg{width:55%;height:55%;display:block;fill:none;stroke:currentColor;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+  .home-btn:active{transform:translateY(2px)}
+  .confetti-piece{position:absolute;top:-10%;width:10px;height:18px;border-radius:3px;opacity:.95;animation:fallConfetti 2.8s linear forwards;z-index:4;pointer-events:none}
+  @keyframes fallConfetti{0%{transform:translateY(-20px) rotate(0deg);opacity:0}8%{opacity:1}100%{transform:translateY(115vh) rotate(720deg);opacity:0}}
+
+  @media (max-width:700px){.safe-box{left:8%;right:8%;top:10%;bottom:10%}.intro{font-size:12px}.note-chip span{display:none}.palette button{width:64px;height:60px}.timeline{height:72px}.game-content{left:5%;right:5%}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <main class="stage" id="stage">
+    <!-- START PAGE -->
+    <section class="page cover-page active" id="startPage" aria-label="开始页">
+      <div class="safe-box">
+        <div class="title-blur"><h1>POISON MELODY</h1></div>
+        <div class="start-actions">
+          <button class="secondary" id="howBtn" type="button">游戏说明</button>
+          <button class="primary" id="startBtn" type="button">开始游戏</button>
+        </div>
+      </div>
+      <div class="info-overlay" id="infoOverlay" role="dialog" aria-modal="true" aria-label="游戏说明">
+        <div class="info-card">
+          <button class="info-close" id="infoClose" type="button" aria-label="关闭">×</button>
+          <h2>游戏说明</h2>
+          <p>老师先设计一个 4 拍“毒药节奏”。</p>
+          <p>游戏会随机出现 10 道节奏：普通节奏请跟唱；如果出现毒药节奏，就保持安静，不要唱出来。</p>
+          <p>每题会先“听一听”，音频结束后再“唱一唱”。</p>
+          <p>普通题完成后可按空格键进入下一题；出现毒药表情时，按空格键也可直接继续。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- MENU PAGE -->
+    <section class="page cover-page" id="menuPage" aria-label="菜单页">
+      <button class="home-btn" type="button" aria-label="返回首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.2 12 4l9 7.2"/><path d="M5.5 10.5V20h5v-5.5h3V20h5v-9.5"/></svg></button>
+      <div class="safe-box menu-box">
+        <div class="menu-title">设计你的毒药节奏</div>
+        <div class="level-switch" aria-label="选择游戏等级">
+          <button class="level-btn active" type="button" data-level="1">LEVEL 1</button>
+          <button class="level-btn" type="button" data-level="2">LEVEL 2</button>
+          <button class="level-btn" type="button" data-level="3">LEVEL 3</button>
+        </div>
+        <div class="palette" id="palette" aria-label="选择音符时值"></div>
+        <div class="timeline-wrap">
+          <div class="beat-labels"><span>第1拍</span><span>第2拍</span><span>第3拍</span><span>第4拍</span></div>
+          <div class="timeline" id="timeline" aria-label="四拍毒药节奏编辑区"></div>
+        </div>
+        <div class="status" id="menuStatus" aria-live="polite">请选择一个拍子开始设计。</div>
+        <div class="menu-actions">
+          <button class="secondary" id="clearBtn" type="button">清除</button>
+          <button class="secondary" id="previewBtn" type="button" disabled>📢 毒药节奏</button>
+          <button class="primary" id="challengeBtn" type="button" disabled>开始挑战</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GAME PAGE -->
+    <section class="page game-page" id="gamePage" aria-label="游戏页">
+      <button class="home-btn" type="button" aria-label="返回首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.2 12 4l9 7.2"/><path d="M5.5 10.5V20h5v-5.5h3V20h5v-9.5"/></svg></button>
+      <div class="counter" id="counter">1 / 10</div>
+      <div class="game-content">
+        <div class="game-cue" id="gameCue" aria-live="polite">听一听</div>
+        <div class="rhythm-card" id="rhythmCard" aria-label="当前四拍节奏"></div>
+        <div class="game-actions">
+          <button class="replay" id="replayBtn" type="button">📢 播放节奏</button>
+          <button class="next" id="nextBtn" type="button" disabled>NEXT</button>
+        </div>
+      </div>
+      <div class="poison-overlay" id="poisonOverlay" role="dialog" aria-modal="true" aria-label="毒药节奏">
+        <div class="poison-card">
+          <button class="close-poison" id="closePoison" type="button" aria-label="关闭">×</button>
+          <img src="images/poison-face.png" alt="毒药节奏中毒表情">
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULT PAGE -->
+    <section class="page result-page" id="resultPage" aria-label="结算页">
+      <button class="home-btn" type="button" aria-label="返回首页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.2 12 4l9 7.2"/><path d="M5.5 10.5V20h5v-5.5h3V20h5v-9.5"/></svg></button>
+      <div class="victory-fx" aria-hidden="true">
+        <span>★</span><span>✦</span><span>★</span><span>✦</span><span>★</span><span>✦</span>
+      </div>
+      <div class="confetti-layer" id="confettiLayer"></div>
+      <div class="result-content">
+        <div class="result-message"><span class="result-title">挑战完成！</span><span class="result-sub">你成功躲过了毒药节奏</span></div>
+        <div class="result-actions">
+          <button class="primary" id="againBtn" type="button">再玩一次</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const stage = $('#stage');
+  const pages = {start:$('#startPage'), menu:$('#menuPage'), game:$('#gamePage'), result:$('#resultPage')};
+  const timeline = $('#timeline');
+  const statusEl = $('#menuStatus');
+  const challengeBtn = $('#challengeBtn');
+  const previewBtn = $('#previewBtn');
+  const rhythmCard = $('#rhythmCard');
+  const counter = $('#counter');
+  const replayBtn = $('#replayBtn');
+  const nextBtn = $('#nextBtn');
+  const gameCue = $('#gameCue');
+  const poisonOverlay = $('#poisonOverlay');
+  const infoOverlay = $('#infoOverlay');
+  const palette = $('#palette');
+  const poisonSfx = new Audio('audios/uh-oh.mp3');
+  poisonSfx.preload='auto';
+
+  const TYPES = {
+    quarter:{beats:1,img:'images/quarter.png',label:'四分音符',fit:76},
+    eighth:{beats:1,img:'images/eighth.png',label:'两个八分音符',fit:76},
+    half:{beats:2,img:'images/half.png',label:'二分音符',fit:76},
+    rest:{beats:1,img:'images/rest.png',label:'四分休止符',fit:76},
+    eighthSixteenth:{beats:1,img:'images/eighth-sixteenth.png',label:'前八后十六',fit:100},
+    sixteenthEighth:{beats:1,img:'images/sixteenth-eighth.png',label:'前十六后八',fit:100},
+    fourSixteenth:{beats:1,img:'images/four-sixteenth.png',label:'四个十六分音符',fit:100},
+    syncopation:{beats:1,img:'images/syncopation.png',label:'小切分节奏',fit:100}
+  };
+  const LEVEL_TYPES = {
+    1:['quarter','eighth','half','rest'],
+    2:['quarter','eighth','half','rest','eighthSixteenth','sixteenthEighth'],
+    3:['quarter','eighth','half','rest','eighthSixteenth','sixteenthEighth','fourSixteenth','syncopation']
+  };
+  let currentLevel = 1;
+  let poisonPattern = [];
+  let selectedBeat = 0;
+  let questions = [];
+  let qIndex = 0;
+  let revealTimer = null;
+  let audioCtx = null;
+  let audioStopTimer = null;
+  let previewTimer = null;
+  let previewBusy = false;
+  let isPlaying = false;
+
+  function resetToHome(){
+    clearTimers();
+    if(previewTimer){clearTimeout(previewTimer);previewTimer=null;}
+    previewBusy=false;
+    if(previewBtn) previewBtn.disabled=!isComplete(poisonPattern);
+    hidePoison();
+    try{poisonSfx.pause();poisonSfx.currentTime=0;}catch(_e){}
+    try{if(audioCtx && audioCtx.state==='running') audioCtx.suspend();}catch(_e){}
+    isPlaying=false;
+    qIndex=0;
+    questions=[];
+    poisonPattern=[];
+    selectedBeat=0;
+    showPage('start');
+  }
+
+  function launchConfetti(){
+    const layer=document.getElementById('confettiLayer');
+    if(!layer) return;
+    layer.innerHTML='';
+    const colors=['#ffbd12','#f66ec5','#61cbb7','#ffffff','#ff8a4c'];
+    for(let i=0;i<42;i++){
+      const s=document.createElement('span');
+      s.className='confetti-piece';
+      s.style.left=(Math.random()*100)+'%';
+      s.style.background=colors[i%colors.length];
+      s.style.animationDelay=(Math.random()*0.8)+'s';
+      s.style.animationDuration=(2.2+Math.random()*1.5)+'s';
+      s.style.transform=`rotate(${Math.random()*180}deg)`;
+      layer.appendChild(s);
+    }
+  }
+
+  function showPage(name){
+    Object.values(pages).forEach(p => p.classList.remove('active'));
+    pages[name].classList.add('active');
+  }
+
+  function uiSelectSound(){
+    ensureAudio();
+    if(!audioCtx) return;
+    const t=audioCtx.currentTime+0.01;
+    const osc=audioCtx.createOscillator();
+    const g=audioCtx.createGain();
+    osc.type='sine';
+    osc.frequency.setValueAtTime(880,t);
+    osc.frequency.exponentialRampToValueAtTime(1046.5,t+0.08);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.10,t+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.16);
+    osc.connect(g).connect(audioCtx.destination);
+    osc.start(t); osc.stop(t+0.18);
+  }
+
+  function eventAtBeat(pattern, beat){
+    return pattern.find(e => beat >= e.start && beat < e.start + TYPES[e.kind].beats);
+  }
+  function startEventAt(pattern, beat){ return pattern.find(e => e.start === beat); }
+  function overlaps(e, start, dur){ return e.start < start + dur && start < e.start + TYPES[e.kind].beats; }
+  function normalize(pattern){ return pattern.slice().sort((a,b)=>a.start-b.start); }
+  function isComplete(pattern){
+    for(let b=0;b<4;b++) if(!eventAtBeat(pattern,b)) return false;
+    return true;
+  }
+
+  function buildRhythmImg(kind){
+    const t=TYPES[kind];
+    const img=document.createElement('img');
+    img.src=t.img;
+    img.alt=t.label;
+    const fit=t.fit || 76;
+    img.style.width=fit+'%';
+    img.style.height=fit+'%';
+    img.style.objectFit='contain';
+    return img;
+  }
+
+  function renderPalette(){
+    palette.innerHTML='';
+    LEVEL_TYPES[currentLevel].forEach(kind=>{
+      const t=TYPES[kind];
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.dataset.kind=kind;
+      btn.setAttribute('aria-label',`${t.label}，${t.beats}拍`);
+      btn.appendChild(buildRhythmImg(kind));
+      btn.addEventListener('click',()=>{uiSelectSound();placeKind(kind);});
+      palette.appendChild(btn);
+    });
+  }
+
+  function setLevel(level){
+    currentLevel=Number(level);
+    document.querySelectorAll('.level-btn').forEach(btn=>btn.classList.toggle('active',Number(btn.dataset.level)===currentLevel));
+    poisonPattern=[]; selectedBeat=0;
+    renderPalette(); renderTimeline();
+    statusEl.textContent=`已切换到 Level ${currentLevel}，请重新设计 4 拍毒药节奏。`;
+  }
+
+  function renderTimeline(){
+    timeline.innerHTML='';
+    for(let b=0;b<4;b++){
+      const cell=document.createElement('button');
+      cell.type='button';
+      cell.className='beat-cell'+(selectedBeat===b?' selected':'');
+      cell.dataset.beat=b;
+      cell.setAttribute('aria-label',`第${b+1}拍`);
+      if(!eventAtBeat(poisonPattern,b)) cell.innerHTML='<span class="hint">+</span>';
+      cell.addEventListener('click',()=>{uiSelectSound();selectedBeat=b;renderTimeline();statusEl.textContent=`已选择第 ${b+1} 拍，请点击上方音符图片。`;});
+      timeline.appendChild(cell);
+    }
+    const gap=8;
+    poisonPattern.forEach(e=>{
+      const tile=document.createElement('button');
+      tile.type='button';
+      tile.className='event-tile '+(e.kind==='rest'?'rest':'');
+      tile.title='点击选择这个位置';
+      tile.style.left=`calc(${e.start*25}% + ${e.start?gap*e.start/4:0}px)`;
+      const span=TYPES[e.kind].beats;
+      tile.style.width=`calc(${span*25}% - ${span===1?6:2}px)`;
+      tile.appendChild(buildRhythmImg(e.kind));
+      tile.addEventListener('click',()=>{uiSelectSound();selectedBeat=e.start;renderTimeline();statusEl.textContent=`已选择第 ${e.start+1} 拍，可点击音符图片替换。`;});
+      timeline.appendChild(tile);
+    });
+    const complete=isComplete(poisonPattern);
+    challengeBtn.disabled=!complete;
+    previewBtn.disabled=!complete || previewBusy;
+    if(complete) statusEl.textContent='毒药节奏已完成，共 4 拍。';
+  }
+
+  function placeKind(kind){
+    const dur=TYPES[kind].beats;
+    if(selectedBeat+dur>4){statusEl.textContent='这个音符放在这里会超过 4 拍，请选择更前面的拍子。';return;}
+    poisonPattern=poisonPattern.filter(e=>!overlaps(e,selectedBeat,dur));
+    poisonPattern.push({start:selectedBeat,kind});
+    poisonPattern=normalize(poisonPattern);
+    const nextFree=[0,1,2,3].find(b=>!eventAtBeat(poisonPattern,b));
+    if(nextFree!==undefined) selectedBeat=nextFree;
+    renderTimeline();
+  }
+
+  function patternKey(p){ return normalize(p).map(e=>`${e.start}:${e.kind}`).join('|'); }
+  function oneBeatCandidates(){
+    return LEVEL_TYPES[currentLevel].filter(k=>TYPES[k].beats===1 && k!=='rest');
+  }
+  function randomPattern(requiredKind=null){
+    const p=[];
+    const occupied=[false,false,false,false];
+    let restCount=0;
+    if(requiredKind){
+      const dur=TYPES[requiredKind].beats;
+      const starts=[];
+      for(let s=0;s<=4-dur;s++) starts.push(s);
+      const start=starts[Math.floor(Math.random()*starts.length)];
+      p.push({start,kind:requiredKind});
+      for(let b=start;b<start+dur;b++) occupied[b]=true;
+      if(requiredKind==='rest') restCount++;
+    }
+    for(let b=0;b<4;b++){
+      if(occupied[b]) continue;
+      let candidates=LEVEL_TYPES[currentLevel].filter(k=>TYPES[k].beats<=4-b);
+      candidates=candidates.filter(k=>{
+        const dur=TYPES[k].beats;
+        for(let x=b;x<b+dur;x++) if(occupied[x]) return false;
+        if(k==='rest' && restCount>=1) return false;
+        return true;
+      });
+      // Prefer sounding rhythms over rests so the questions stay singable.
+      const sounding=candidates.filter(k=>k!=='rest');
+      if(sounding.length && Math.random()<0.85) candidates=sounding;
+      const kind=candidates[Math.floor(Math.random()*candidates.length)];
+      p.push({start:b,kind});
+      const dur=TYPES[kind].beats;
+      for(let x=b;x<b+dur;x++) occupied[x]=true;
+      if(kind==='rest') restCount++;
+    }
+    return normalize(p);
+  }
+  function buildQuestions(){
+    const poisonCount=2;
+    const poisonPositions=new Set();
+    while(poisonPositions.size<poisonCount) poisonPositions.add(Math.floor(Math.random()*10));
+    const pk=patternKey(poisonPattern);
+    const used=new Set([pk]);
+    const required=currentLevel===1 ? [] : currentLevel===2
+      ? ['eighthSixteenth','sixteenthEighth']
+      : ['eighthSixteenth','sixteenthEighth','fourSixteenth','syncopation'];
+    const generated=[];
+
+    // Guarantee the rhythms introduced by the selected level appear in the round.
+    required.forEach(kind=>{
+      let p,tries=0,key='';
+      do{ p=randomPattern(kind); key=patternKey(p); tries++; }while((used.has(key) || key===pk) && tries<120);
+      if(key!==pk && !used.has(key)){ used.add(key); generated.push(p); }
+    });
+
+    while(generated.length<10-poisonCount){
+      let p,tries=0,key='';
+      do{ p=randomPattern(); key=patternKey(p); tries++; }while((used.has(key) || key===pk) && tries<160);
+      if(key!==pk && !used.has(key)){ used.add(key); generated.push(p); }
+      else if(tries>=160){
+        // Very unlikely fallback: still avoid poison; allow a repeat only if uniqueness is exhausted.
+        do{ p=randomPattern(); key=patternKey(p); }while(key===pk);
+        generated.push(p);
+      }
+    }
+
+    // Shuffle the non-poison set so guaranteed advanced rhythms are not always early.
+    for(let i=generated.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [generated[i],generated[j]]=[generated[j],generated[i]];
+    }
+    questions=[];
+    let gi=0;
+    for(let i=0;i<10;i++){
+      if(poisonPositions.has(i)) questions.push(poisonPattern.map(e=>({...e})));
+      else questions.push(generated[gi++]);
+    }
+  }
+
+  function renderGamePattern(pattern){
+    rhythmCard.innerHTML='';
+    for(let b=0;b<4;b++){
+      const col=document.createElement('div'); col.className='game-beat'; rhythmCard.appendChild(col);
+    }
+    pattern.forEach(e=>{
+      const tile=document.createElement('div');
+      tile.className='game-event '+(e.kind==='rest'?'rest':'');
+      tile.style.left=`calc(${e.start*25}% + 10px)`;
+      tile.style.width=`calc(${TYPES[e.kind].beats*25}% - 14px)`;
+      tile.appendChild(buildRhythmImg(e.kind));
+      rhythmCard.appendChild(tile);
+    });
+  }
+
+  function ensureAudio(){
+    if(!audioCtx){ const AC=window.AudioContext||window.webkitAudioContext; if(AC) audioCtx=new AC(); }
+    if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  // 所有有声音符都使用同一个更自然的槌击乐器音色。
+  // 通过较柔和的起音、木质瞬态与衰减泛音模拟木琴/马林巴类声音，避免机械电子感。
+  function malletTone(time,duration=0.9,frequency=698.46){
+    if(!audioCtx) return;
+
+    const out=audioCtx.createGain();
+    const body=audioCtx.createBiquadFilter();
+    body.type='lowpass';
+    body.frequency.setValueAtTime(5600,time);
+    body.Q.setValueAtTime(0.7,time);
+
+    // 主音包络跟随真实时值，短音不会彼此糊在一起；同时保留很轻的自然余韵。
+    const mainEnd=time+Math.max(0.16,duration);
+    const tailEnd=mainEnd+0.16;
+    out.gain.setValueAtTime(0.0001,time);
+    out.gain.exponentialRampToValueAtTime(0.26,time+0.014);
+    out.gain.exponentialRampToValueAtTime(0.18,time+Math.min(0.085,Math.max(0.045,duration*0.22)));
+    out.gain.exponentialRampToValueAtTime(0.025,mainEnd);
+    out.gain.exponentialRampToValueAtTime(0.0001,tailEnd);
+
+    const baseFreq=frequency; // 默认 F5；胜利音效可传入不同音高
+    const partials=[
+      {ratio:1.00,gain:1.00,decay:1.00,type:'sine'},
+      {ratio:2.01,gain:0.18,decay:0.74,type:'sine'},
+      {ratio:3.92,gain:0.055,decay:0.48,type:'sine'}
+    ];
+
+    partials.forEach(part=>{
+      const osc=audioCtx.createOscillator();
+      const g=audioCtx.createGain();
+      osc.type=part.type;
+      osc.frequency.setValueAtTime(baseFreq*part.ratio,time);
+      osc.detune.setValueAtTime((part.ratio===1?0:3),time);
+      const pEnd=time+Math.max(0.13,duration*part.decay);
+      g.gain.setValueAtTime(0.0001,time);
+      g.gain.exponentialRampToValueAtTime(part.gain,time+0.012);
+      g.gain.exponentialRampToValueAtTime(0.018,pEnd);
+      g.gain.exponentialRampToValueAtTime(0.0001,pEnd+0.13);
+      osc.connect(g).connect(body);
+      osc.start(time);
+      osc.stop(pEnd+0.18);
+    });
+
+    const transient=audioCtx.createOscillator();
+    const tg=audioCtx.createGain();
+    transient.type='triangle';
+    transient.frequency.setValueAtTime(baseFreq*1.45,time);
+    transient.frequency.exponentialRampToValueAtTime(baseFreq,time+0.045);
+    tg.gain.setValueAtTime(0.05,time);
+    tg.gain.exponentialRampToValueAtTime(0.0001,time+0.065);
+    transient.connect(tg).connect(body);
+    transient.start(time);
+    transient.stop(time+0.08);
+
+    body.connect(out).connect(audioCtx.destination);
+  }
+  function schedulePattern(pattern){
+    ensureAudio();
+    if(!audioCtx) return 0;
+    const beat=1.0;
+    const t0=audioCtx.currentTime+0.08;
+    pattern.forEach(e=>{
+      const t=t0+e.start*beat;
+      if(e.kind==='quarter') malletTone(t,0.92*beat);
+      if(e.kind==='eighth'){
+        malletTone(t,0.40*beat);
+        malletTone(t+0.5*beat,0.40*beat);
+      }
+      if(e.kind==='half') malletTone(t,1.90*beat);
+      if(e.kind==='eighthSixteenth'){
+        malletTone(t,0.40*beat);
+        malletTone(t+0.5*beat,0.18*beat);
+        malletTone(t+0.75*beat,0.18*beat);
+      }
+      if(e.kind==='sixteenthEighth'){
+        malletTone(t,0.18*beat);
+        malletTone(t+0.25*beat,0.18*beat);
+        malletTone(t+0.5*beat,0.40*beat);
+      }
+      if(e.kind==='fourSixteenth'){
+        malletTone(t,0.18*beat);
+        malletTone(t+0.25*beat,0.18*beat);
+        malletTone(t+0.5*beat,0.18*beat);
+        malletTone(t+0.75*beat,0.18*beat);
+      }
+      if(e.kind==='syncopation'){
+        // 小切分：附点八分音符 + 十六分音符，共 1 拍。听感为“长－短”。
+        malletTone(t,0.66*beat);
+        malletTone(t+0.75*beat,0.18*beat);
+      }
+      // 四分休止符保持静音。
+    });
+    return 4.08;
+  }
+
+  function clearTimers(){
+    if(revealTimer){clearTimeout(revealTimer);revealTimer=null;}
+    if(audioStopTimer){clearTimeout(audioStopTimer);audioStopTimer=null;}
+  }
+  function isPoison(pattern){return patternKey(pattern)===patternKey(poisonPattern);}
+  function hidePoison(){
+    poisonOverlay.classList.remove('show');
+    stage.classList.remove('shake');
+  }
+  let poisonDismissBusy=false;
+  function victorySound(){
+    try{
+      ensureAudio();
+      if(!audioCtx) return;
+      const t=audioCtx.currentTime+0.06;
+      // 明亮、简短的胜利音型：继续使用同一套自然槌击乐器音色。
+      const freqs=[659.25,783.99,987.77,1318.51];
+      freqs.forEach((f,i)=>malletTone(t+i*0.18, i===3 ? 0.78 : 0.34, f));
+    }catch(_e){}
+  }
+  function goToResult(){
+    clearTimers();
+    hidePoison();
+    isPlaying=false;
+    showPage('result');
+    launchConfetti();
+    victorySound();
+  }
+  function dismissPoisonAndContinue(){
+    if(poisonDismissBusy || !poisonOverlay.classList.contains('show')) return;
+    poisonDismissBusy=true;
+    hidePoison();
+    clearTimers();
+    isPlaying=false;
+    if(qIndex<9){
+      qIndex++;
+      setTimeout(()=>{
+        poisonDismissBusy=false;
+        loadQuestion();
+      },120);
+    }else{
+      poisonDismissBusy=false;
+      goToResult();
+    }
+  }
+  function poisonOopsSound(){
+    try{
+      poisonSfx.pause();
+      poisonSfx.currentTime=0;
+      poisonSfx.volume=1;
+      const playPromise=poisonSfx.play();
+      if(playPromise && typeof playPromise.catch==='function') playPromise.catch(()=>{});
+    }catch(_e){}
+  }
+  function showPoison(){
+    poisonDismissBusy=false;
+    poisonOopsSound();
+    poisonOverlay.classList.add('show');
+    stage.classList.remove('shake');
+    void stage.offsetWidth;
+    stage.classList.add('shake');
+    const closeBtn=$('#closePoison');
+    if(closeBtn) setTimeout(()=>closeBtn.focus(),60);
+  }
+
+  function playCurrent({auto=false}={}){
+    clearTimers(); hidePoison();
+    const pattern=questions[qIndex];
+    isPlaying=true; replayBtn.disabled=true; nextBtn.disabled=true;
+    gameCue.textContent='听一听';
+    const playDuration = schedulePattern(pattern) || 4.1;
+    audioStopTimer=setTimeout(()=>{
+      gameCue.textContent='唱一唱';
+    }, Math.round(playDuration * 1000));
+    revealTimer=setTimeout(()=>{
+      isPlaying=false; replayBtn.disabled=false; nextBtn.disabled=false;
+      if(isPoison(pattern)) showPoison();
+    }, Math.round((playDuration + 4) * 1000));
+  }
+
+  function loadQuestion(){
+    clearTimers(); hidePoison();
+    const pattern=questions[qIndex];
+    counter.textContent=`${qIndex+1} / 10`;
+    renderGamePattern(pattern);
+    nextBtn.textContent=qIndex===9?'完成':'NEXT';
+    nextBtn.disabled=true;
+    replayBtn.disabled=true;
+    gameCue.textContent='听一听';
+    // 浏览器要求第一次音频必须由用户操作解锁。进入挑战来自点击，因此第一题可立即播放；后续同样自动播放。
+    playCurrent({auto:true});
+  }
+
+  $('#howBtn').addEventListener('click',()=>{uiSelectSound(); infoOverlay.classList.add('show');});
+  $('#infoClose').addEventListener('click',()=>{uiSelectSound(); infoOverlay.classList.remove('show');});
+  $('#startBtn').addEventListener('click',()=>{uiSelectSound();showPage('menu');renderPalette();renderTimeline();});
+  document.querySelectorAll('.home-btn').forEach(btn=>btn.addEventListener('click',()=>{uiSelectSound();resetToHome();}));
+  document.querySelectorAll('.level-btn').forEach(btn=>btn.addEventListener('click',()=>{uiSelectSound();setLevel(btn.dataset.level);}));
+  $('#clearBtn').addEventListener('click',()=>{uiSelectSound();poisonPattern=[];selectedBeat=0;renderTimeline();statusEl.textContent='已清除，请重新设计 4 拍毒药节奏。';});
+  previewBtn.addEventListener('click',()=>{
+    if(!isComplete(poisonPattern) || previewBusy) return;
+    uiSelectSound();
+    ensureAudio();
+    previewBusy=true;
+    previewBtn.disabled=true;
+    const previewSeconds=schedulePattern(poisonPattern);
+    if(previewTimer) clearTimeout(previewTimer);
+    previewTimer=setTimeout(()=>{
+      previewBusy=false;
+      previewTimer=null;
+      previewBtn.disabled=!isComplete(poisonPattern);
+    },Math.ceil((previewSeconds+0.15)*1000));
+  });
+  challengeBtn.addEventListener('click',()=>{
+    if(!isComplete(poisonPattern)) return;
+    uiSelectSound(); ensureAudio(); buildQuestions(); qIndex=0; showPage('game'); loadQuestion();
+  });
+  replayBtn.addEventListener('click',()=>{if(!isPlaying) playCurrent();});
+  nextBtn.addEventListener('click',()=>{
+    if(isPlaying) return;
+    if(qIndex<9){qIndex++;loadQuestion();}
+    else{
+      goToResult();
+    }
+  });
+  $('#againBtn').addEventListener('click',()=>{
+    uiSelectSound(); poisonPattern=[]; selectedBeat=0; questions=[]; qIndex=0;
+    showPage('menu'); renderPalette(); renderTimeline();
+    statusEl.textContent='请选择一个拍子开始设计。';
+  });
+  const closePoisonBtn=$('#closePoison');
+  closePoisonBtn.addEventListener('click',(e)=>{
+    e.preventDefault(); e.stopPropagation(); dismissPoisonAndContinue();
+  });
+  document.addEventListener('keydown',e=>{
+    if(e.code!=='Space') return;
+    const tag=(document.activeElement && document.activeElement.tagName || '').toLowerCase();
+    if(tag==='input' || tag==='textarea' || tag==='select') return;
+    if(poisonOverlay.classList.contains('show')){
+      e.preventDefault(); dismissPoisonAndContinue(); return;
+    }
+    if(pages.game.classList.contains('active') && !isPlaying && !nextBtn.disabled){
+      e.preventDefault();
+      if(qIndex<9){qIndex++;loadQuestion();}
+      else{goToResult();}
+    }
+  });
+  renderPalette();
+  renderTimeline();
+})();
+</script>
+</body>
+</html>
